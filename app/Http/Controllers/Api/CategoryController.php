@@ -55,7 +55,7 @@ class CategoryController extends Controller
         }
 
         $request->validate([
-            'nama' => 'required|string|unique:categories,nama,' . $id, 
+            'nama' => 'required|string|unique:categories,nama,' . $id,
         ]);
 
         $category->update(['nama' => $request->nama]);
