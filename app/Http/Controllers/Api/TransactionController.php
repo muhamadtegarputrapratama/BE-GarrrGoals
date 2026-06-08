@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TransactionController extends Controller
 {
@@ -32,19 +33,33 @@ class TransactionController extends Controller
 
     $user = User::find($request->user()->id);
 
-    // Cegah saldo minus
     if (
         $request->tipe === 'pengeluaran' &&
-        $user->saldo < $request->jumlah //kalo pengeluaran, pastiin saldo e cukup
+        $user->saldo < $request->jumlah
     ) {
         return response()->json([
             'message' => 'Saldo tidak mencukupi'
         ], 422);
     }
 
+    $filePath = null;
+
+    if ($request->hasFile('bukti_file')) {
+        $filePath = $request
+            ->file('bukti_file')
+            ->store('transactions', 'public');
+    }
+
+    
+
     $transaction = null;
 
-    DB::transaction(function () use ($request, $user, &$transaction) {
+    DB::transaction(function () use (
+        $request,
+        $user,
+        &$transaction,
+        $filePath
+    ) {
 
         $transaction = Transaction::create([
             'user_id'     => $request->user()->id,
@@ -52,6 +67,7 @@ class TransactionController extends Controller
             'jumlah'      => $request->jumlah,
             'tipe'        => $request->tipe,
             'deskripsi'   => $request->deskripsi,
+            'bukti_file'  => $filePath,
         ]);
 
         if ($request->tipe === 'pemasukan') {
@@ -63,7 +79,7 @@ class TransactionController extends Controller
 
     return response()->json([
         'message'     => 'Transaksi berhasil dicatat',
-        'saldo'       => $user->fresh()->saldo, //fresh=dapetin data terbaru
+        'saldo'       => $user->fresh()->saldo,
         'transaction' => $transaction,
     ], 201);
 }
@@ -97,7 +113,7 @@ class TransactionController extends Controller
     DB::transaction(function () use ($request, $transaction) {
         $user = $request->user();
 
-        // Kembalikan saldo 
+        // Kembalikan saldo
         if ($transaction->tipe === 'pemasukan') {
             $user->decrement('saldo', $transaction->jumlah);
         } else {

@@ -11,7 +11,7 @@ class tasks extends Model
         'judul',
         'deskripsi',
         'status',
-        'file,'
+        'file'
     ];
 
     public function user() {

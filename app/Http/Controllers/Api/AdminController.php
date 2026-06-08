@@ -55,7 +55,7 @@ public function tasks()
 
 public function transactions()
 {
-    return Transaction::with('user', 'category') 
+    return Transaction::with('user', 'category')
         ->latest()
         ->get();
 }

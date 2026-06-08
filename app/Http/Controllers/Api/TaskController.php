@@ -61,37 +61,48 @@ class TaskController extends Controller
     }
 
 
-    public function update(Request $request, $id)
-    {
-        $task = tasks::where('id', $id)
-                    ->where('user_id', $request->user()->id)
-                    ->first();
+   public function update(Request $request, $id)
+{
+    $task = Tasks::where('id', $id)
+        ->where('user_id', $request->user()->id)
+        ->first();
 
-        if (!$task) {
-            return response()->json(['message' => 'Task tidak ditemukan'], 404);
+    if (!$task) {
+        return response()->json([
+            'message' => 'Task tidak ditemukan'
+        ], 404);
+    }
+
+    $request->validate([
+        'judul'     => 'sometimes|string',
+        'deskripsi' => 'nullable|string',
+        'status'    => 'sometimes|in:pending,in_progress,selesai',
+        'file'      => 'nullable|file|max:2048',
+    ]);
+
+    $data = $request->only([
+        'judul',
+        'deskripsi',
+        'status'
+    ]);
+
+    if ($request->hasFile('file')) {
+
+        if ($task->file) {
+            Storage::disk('public')->delete($task->file);
         }
 
-        $request->validate([
-            'judul'     => 'sometimes|string',
-            'deskripsi' => 'nullable|string',
-            'status'    => 'sometimes|in:pending,in_progress,selesai',
-            'file'      => 'nullable|file|max:2048',
-        ]);
-
-        if ($request->hasFile('file')) {
-          if ($task->file) {
-        Storage::disk('public')->delete($task->file);
+        $data['file'] = $request->file('file')
+            ->store('tasks', 'public');
     }
-    $task->file = $request->file('file')->store('tasks', 'public');
+
+    $task->update($data);
+
+    return response()->json([
+        'message' => 'Task berhasil diupdate',
+        'task' => $task->fresh(),
+    ]);
 }
-
-        $task->update($request->only(['judul', 'deskripsi', 'status']));
-
-        return response()->json([
-            'message' => 'Task berhasil diupdate',
-            'task'    => $task,
-        ]);
-    }
 
 
     public function destroy(Request $request, $id)
